@@ -68,19 +68,27 @@ jobs:
                       fields(first: 50) { # List of field definitions in the project
                         nodes {
                           __typename
-                          ... on ProjectV2Field {
-                            id # Field's Node ID
-                            name
-                          }
-                          ... on ProjectV2SingleSelectField {
+                          ... on ProjectV2Field { # For common properties like id, name, and dataType
                             id
                             name
-                            options { # Available options for single-select
-                              id # Option's Node ID
+                            dataType
+                          }
+                          ... on ProjectV2SingleSelectField { # For specific properties of single select
+                            # id, name, dataType are covered by ProjectV2Field fragment
+                            options {
+                              id
                               name
                             }
                           }
+                          ... on ProjectV2IterationField { # For specific properties of iteration fields (if any)
+                            # id, name, dataType are covered by ProjectV2Field fragment
+                            # Add specific iteration properties here if needed later, e.g.:
+                            # configuration {
+                            #   iterations { id title startDate duration }
+                            # }
+                          }
                           # Add other field types here if they are part of your defaults
+                          # and require querying specific nested properties.
                         }
                       }
                     }
