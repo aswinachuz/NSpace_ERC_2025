@@ -34,9 +34,6 @@ jobs:
         with:
           github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }}
           script: |
-            const core = require('@actions/core');
-            const github = require('@actions/github');
-
             const itemId = "${{ steps.add_issue_to_project_step.outputs.itemId }}";
             const projectId = "${{ steps.add_issue_to_project_step.outputs.projectId }}";
             const issueLabels = github.context.payload.issue.labels.map(label => label.name.toLowerCase());
@@ -53,59 +50,36 @@ jobs:
             }
 
             const fieldNodeIds = {
-              priority: "PVTSSF_lAHOB_NSpaceTeam4zgB190903138A",
-              module: "PVTSSF_lAHOB_NSpaceTeam4zgB190903623A",
-              challenge: "PVTSSF_lAHOB_NSpaceTeam4zgB190903832A",
-              dueDate: "PVTSSF_lAHOB_NSpaceTeam4zgB190903996A"
-              // Size/Effort: "PVTSSF_lAHOB_NSpaceTeam4zgB190903964A" // Not used as no labels map to it yet
+              priority: "PVTSSF_lADODIbpr84A4kaJzgtg82I",
+              module: "PVTSSF_lADODIbpr84A4kaJzgtg9Uc",
+              challenge: "PVTSSF_lADODIbpr84A4kaJzgtg9hg",
+              dueDate: "PVTF_lADODIbpr84A4kaJzgtg9rw"
+              // Size/Effort: "PVTSSF_lADODIbpr84A4kaJzgtg9pw" // Not used as no labels map to it yet
             };
 
-            // !!! IMPORTANT: User needs to replace these placeholder Option IDs with actual GraphQL Node IDs !!!
-            // How to find Option IDs:
-            // 1. Go to your project settings on GitHub.
-            // 2. Inspect the network requests when changing a single-select field's value, or
-            // 3. Use GitHub GraphQL API Explorer or `gh api graphql` to query the project's fields and their options:
-            //    query {
-            //      node(id: "YOUR_PROJECT_NODE_ID") { # Replace YOUR_PROJECT_NODE_ID with the value of `projectId` from logs
-            //        ... on ProjectV2 {
-            //          fields(first: 20) {
-            //            nodes {
-            //              ... on ProjectV2SingleSelectField {
-            //                id
-            //                name
-            //                options {
-            //                  id # This is the Option ID you need
-            //                  name
-            //                }
-            //              }
-            //            }
-            //          }
-            //        }
-            //      }
-            //    }
             const optionNodeIds = {
               priority: {
-                "low": "OPTION_ID_FOR_LOW_PRIORITY",        // e.g., PVTSSO_............................
-                "medium": "OPTION_ID_FOR_MEDIUM_PRIORITY",  // e.g., PVTSSO_............................
-                "high": "OPTION_ID_FOR_HIGH_PRIORITY"       // e.g., PVTSSO_............................
+                "low": "b653cff7",        // e.g., PVTSSO_............................
+                "medium": "c02548bb",  // e.g., PVTSSO_............................
+                "high": "50f8fda7"       // e.g., PVTSSO_............................
               },
               module: {
-                "ai-ml": "OPTION_ID_FOR_AI_ML_MODULE",
-                "control-systems": "OPTION_ID_FOR_CONTROL_SYSTEMS_MODULE",
-                "embedded": "OPTION_ID_FOR_EMBEDDED_MODULE",
-                "navigation": "OPTION_ID_FOR_NAVIGATION_MODULE",
-                "perception": "OPTION_ID_FOR_PERCEPTION_MODULE",
-                "simulation": "OPTION_ID_FOR_SIMULATION_MODULE",
-                "airlock": "OPTION_ID_FOR_AIRLOCK_MODULE",
-                "equipment-panel": "OPTION_ID_FOR_EQUIPMENT_PANEL_MODULE",
-                "documentation": "OPTION_ID_FOR_DOCUMENTATION_MODULE"
+                "ai-ml": "7a5cb45e",
+                "control-systems": "e3ee966d",
+                "embedded": "9a234a88",
+                "navigation": "9864b4b7",
+                "perception": "eeb738a6",
+                "simulation": "aa0149a2",
+                "airlock": "d35e65ba",
+                "equipment-panel": "65c72123",
+                "documentation": "ffbc7c98"
               },
               challenge: {
-                "Overall Project": "OPTION_ID_FOR_OVERALL_PROJECT_CHALLENGE",
-                "Connectivity Test": "OPTION_ID_FOR_CONNECTIVITY_TEST_CHALLENGE",
-                "Payload Test": "OPTION_ID_FOR_PAYLOAD_TEST_CHALLENGE",
-                "Challenge 1": "OPTION_ID_FOR_CHALLENGE_1",
-                "Challenge 2": "OPTION_ID_FOR_CHALLENGE_2"
+                "Overall Project": "5bcb98b2",
+                "Connectivity Test": "7c32bfbf",
+                "Payload Test": "ecac1de9",
+                "Challenge 1": "7b17317c",
+                "Challenge 2": "92d04f4f"
               }
             };
 
