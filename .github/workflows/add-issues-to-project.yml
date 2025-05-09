@@ -24,19 +24,396 @@ jobs:
             const formattedDueDate = `${year}-${month}-${day}`;
             core.setOutput("due_date", formattedDueDate);
       - name: Add to NSpace ERC Project
+        id: add_issue_to_project_step # Added ID for referencing output (itemId)
         uses: actions/add-to-project@v0.5.0 # Use the latest version
         with:
           project-url: "https://github.com/orgs/NSpaceTeam/projects/4"
           github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }} # PAT with project scope
-          # Default field values (will be overridden by 'labeled' if a match is found)
-          Priority: medium
-          Challenge: Overall Project
-          Size/Effort: S (1-2d) # Default Size/Effort
-          Due Date: ${{ steps.calculate_due_date.outputs.due_date }}
-          # Label-based field assignments
-          # Field names (e.g., Priority) and their values (e.g., high) must exactly match your project's configuration.
-          # Labels (e.g., high priority) must exactly match your repository's labels.
-          labeled: "Priority=high:high priority,Priority=medium:medium priority,Priority=low:low priority,Module=ai-ml:ai-ml,Module=control-systems:control-systems,Module=embedded:embedded,Module=navigation:navigation,Module=perception:perception,Module=simulation:simulation,Module=airlock:airlock,Module=equipment-panel:equipment-panel,Module=documentation:documentation,Challenge=Challenge 1:challenge-1,Challenge=Challenge 2:challenge-2,Challenge=Connectivity Test:connectivity-test,Challenge=Payload Test:payload-test"
+          # The `labeled` input was removed to ensure all issues are added to the project.
+          # Previously, it caused issues to be skipped if they didn't match any specified labels.
+          # Field setting (Priority, Module, Challenge, Size/Effort, Due Date based on labels or defaults)
+          # will now need to be handled in a subsequent step using the GitHub API,
+          # referencing `steps.add_issue_to_project_step.outputs.itemId`
+          # and `steps.calculate_due_date.outputs.due_date`.
+          #
+          # The following 'labeled' line was removed:
+          # labeled: "Priority=high:high priority,Priority=medium:medium priority,Priority=low:low priority,Module=ai-ml:ai-ml,Module=control-systems:control-systems,Module=embedded:embedded,Module=navigation:navigation,Module=perception:perception,Module=simulation:simulation,Module=airlock:airlock,Module=equipment-panel:equipment-panel,Module=documentation:documentation,Challenge=Challenge 1:challenge-1,Challenge=Challenge 2:challenge-2,Challenge=Connectivity Test:connectivity-test,Challenge=Payload Test:payload-test"
+      - name: Set Default Project Fields
+        if: steps.add_issue_to_project_step.outputs.itemId != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }}
+          script: |
+            const itemId = "${{ steps.add_issue_to_project_step.outputs.itemId }}";
+            if (!itemId) {
+              console.log("No item ID found from 'add_issue_to_project_step'. Skipping default field updates.");
+              return;
+            }
+
+            const projectURL = "https://github.com/orgs/NSpaceTeam/projects/4";
+            const projectOwnerLogin = projectURL.split('/')[3];
+            const projectNumber = parseInt(projectURL.split('/')[5]);
+            const dueDateValue = "${{ steps.calculate_due_date.outputs.due_date }}";
+
+            console.log(`Attempting to set default fields for item ID: ${itemId}`);
+
+            try {
+              // Query to get project structure (field definitions, options)
+              const projectStructureQuery = `
+                query getProjectStructure($ownerLogin: String!, $projectNumber: Int!) {
+                  organization(login: $ownerLogin) {
+                    projectV2(number: $projectNumber) {
+                      id # Project's Node ID
+                      fields(first: 50) { # List of field definitions in the project
+                        nodes {
+                          __typename
+                          ... on ProjectV2Field {
+                            id # Field's Node ID
+                            name
+                          }
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options { # Available options for single-select
+                              id # Option's Node ID
+                              name
+                            }
+                          }
+                          # Add other field types here if they are part of your defaults
+                        }
+                      }
+                    }
+                  }
+                }`;
+
+              const projectStructureData = await github.graphql(projectStructureQuery, { ownerLogin, projectNumber });
+
+              if (!projectStructureData.organization || !projectStructureData.organization.projectV2) {
+                core.setFailed(`Could not find projectV2 (structure) for owner '${projectOwnerLogin}' and number ${projectNumber}. Check project URL and token permissions.`);
+                return;
+              }
+
+              const projectId = projectStructureData.organization.projectV2.id;
+              const projectFields = projectStructureData.organization.projectV2.fields.nodes;
+              console.log(`Project Node ID: ${projectId}`);
+
+              // Query to get current field values for the specific item
+              const itemValuesQuery = `
+                query getItemValues($itemIdNode: ID!) {
+                  node(id: $itemIdNode) {
+                    ... on ProjectV2Item {
+                      id
+                      fieldValues(first: 30) { # Get item's current field values
+                        nodes {
+                          __typename
+                          ... on ProjectV2ItemFieldDateValue {
+                            date
+                            projectField { id name }
+                          }
+                          ... on ProjectV2ItemFieldSingleSelectValue {
+                            optionId # The ID of the currently selected option
+                            projectField { id name }
+                          }
+                          ... on ProjectV2ItemFieldTextValue {
+                            text
+                            projectField { id name }
+                          }
+                          ... on ProjectV2ItemFieldNumberValue {
+                            number
+                            projectField { id name }
+                          }
+                          # Add other field value types if needed for checking
+                        }
+                      }
+                    }
+                  }
+                }`;
+
+              const itemData = await github.graphql(itemValuesQuery, { itemIdNode: itemId });
+              const currentFieldValues = itemData.node && itemData.node.fieldValues ? itemData.node.fieldValues.nodes : [];
+
+              // Map current field values by field ID for easy lookup to see if they are set
+              const currentValuesMap = new Map();
+              for (const valNode of currentFieldValues) {
+                if (valNode.projectField && valNode.projectField.id) {
+                  let isFieldSet = false;
+                  switch (valNode.__typename) {
+                    case 'ProjectV2ItemFieldDateValue':
+                      if (valNode.date) isFieldSet = true;
+                      break;
+                    case 'ProjectV2ItemFieldSingleSelectValue':
+                      if (valNode.optionId) isFieldSet = true;
+                      break;
+                    case 'ProjectV2ItemFieldTextValue':
+                      if (valNode.text !== null && valNode.text !== '') isFieldSet = true;
+                      break;
+                    case 'ProjectV2ItemFieldNumberValue':
+                      if (typeof valNode.number === 'number') isFieldSet = true;
+                      break;
+                  }
+                  if (isFieldSet) {
+                    currentValuesMap.set(valNode.projectField.id, true); // Mark as set
+                  }
+                }
+              }
+              console.log("Current field values fetched and mapped for checking.");
+
+              const getFieldId = (name) => {
+                const field = projectFields.find(f => f.name === name);
+                if (!field) console.warn(`Field definition '${name}' not found in project structure.`);
+                return field ? field.id : null;
+              };
+
+              const getOptionId = (fieldName, optionName) => {
+                const field = projectFields.find(f => f.name === fieldName && f.__typename === 'ProjectV2SingleSelectField');
+                if (!field) {
+                  // console.warn(`Single select field definition '${fieldName}' not found.`); // Can be noisy
+                  return null;
+                }
+                const option = field.options.find(opt => opt.name === optionName);
+                if (!option) console.warn(`Option '${optionName}' not found for field '${fieldName}'.`);
+                return option ? option.id : null;
+              };
+
+              const fieldsToSetDefaultsFor = [
+                { name: "Priority", defaultValue: getOptionId("Priority", "medium"), type: "SINGLE_SELECT" },
+                { name: "Challenge", defaultValue: getOptionId("Challenge", "Overall Project"), type: "SINGLE_SELECT" },
+                { name: "Size/Effort", defaultValue: getOptionId("Size/Effort", "S (1-2d)"), type: "SINGLE_SELECT" },
+                { name: "Due Date", defaultValue: dueDateValue, type: "DATE" }
+              ];
+
+              for (const fieldDefaultInfo of fieldsToSetDefaultsFor) {
+                const fieldId = getFieldId(fieldDefaultInfo.name);
+                if (!fieldId) {
+                  console.warn(`Skipping default for field '${fieldDefaultInfo.name}' as its definition ID was not found.`);
+                  continue;
+                }
+
+                // Check if the field already has a value on the item
+                if (currentValuesMap.has(fieldId)) {
+                  console.log(`Field '${fieldDefaultInfo.name}' (ID: ${fieldId}) already has a value. Skipping default setting.`);
+                  continue;
+                }
+
+                // If field has no value, proceed to set default
+                if (!fieldDefaultInfo.defaultValue) {
+                  console.warn(`Skipping default for field '${fieldDefaultInfo.name}' as its default value is missing (e.g., option ID not found or date not provided).`);
+                  continue;
+                }
+
+                console.log(`Setting default for field '${fieldDefaultInfo.name}' (ID: ${fieldId}) as it is not already set.`);
+                
+                let mutationValue;
+                if (fieldDefaultInfo.type === "SINGLE_SELECT") {
+                  mutationValue = { singleSelectOptionId: fieldDefaultInfo.defaultValue };
+                } else if (fieldDefaultInfo.type === "DATE") {
+                  mutationValue = { date: fieldDefaultInfo.defaultValue };
+                } else {
+                  console.warn(`Unsupported field type '${fieldDefaultInfo.type}' for field '${fieldDefaultInfo.name}' during default setting.`);
+                  continue;
+                }
+
+                const mutation = `
+                  mutation($input: UpdateProjectV2ItemFieldValueInput!) {
+                    updateProjectV2ItemFieldValue(input: $input) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }`;
+                
+                await github.graphql(mutation, {
+                  input: {
+                    projectId: projectId,
+                    itemId: itemId,
+                    fieldId: fieldId,
+                    value: mutationValue
+                  }
+                });
+                console.log(`Successfully set default for field '${fieldDefaultInfo.name}'.`);
+              }
+              console.log("Default field setting process complete.");
+
+            } catch (error) {
+              core.setFailed(`Error setting default project fields: ${error.message}\n${error.stack}`);
+            }
+      - name: Set Project Fields Based on Labels
+        if: steps.add_issue_to_project_step.outputs.itemId != ''
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }}
+          script: |
+            const itemId = "${{ steps.add_issue_to_project_step.outputs.itemId }}";
+            const issueLabels = context.payload.issue.labels.map(label => label.name.toLowerCase());
+
+            if (!itemId) {
+              console.log("No item ID found. Skipping label-based field updates.");
+              return;
+            }
+            if (issueLabels.length === 0) {
+              console.log("No labels found on the issue. Skipping label-based field updates.");
+              return;
+            }
+
+            console.log(`Attempting to set fields based on labels for item ID: ${itemId}`);
+            console.log(`Issue labels: ${issueLabels.join(', ')}`);
+
+            const projectURL = "https://github.com/orgs/NSpaceTeam/projects/4"; // Duplicated for clarity, consider outputs if preferred
+            const projectOwnerLogin = projectURL.split('/')[3];
+            const projectNumber = parseInt(projectURL.split('/')[5]);
+
+            try {
+              const projectDataQuery = `
+                query getProjectDataForLabelUpdate($ownerLogin: String!, $projectNumber: Int!) {
+                  organization(login: $ownerLogin) {
+                    projectV2(number: $projectNumber) {
+                      id
+                      fields(first: 50) {
+                        nodes {
+                          __typename
+                          ... on ProjectV2Field {
+                            id
+                            name
+                          }
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }`;
+
+              const projectData = await github.graphql(projectDataQuery, { ownerLogin, projectNumber });
+
+              if (!projectData.organization || !projectData.organization.projectV2) {
+                core.setFailed(`Could not find projectV2 for owner '${projectOwnerLogin}' and number ${projectNumber} (label update step).`);
+                return;
+              }
+
+              const projectId = projectData.organization.projectV2.id;
+              const projectFields = projectData.organization.projectV2.fields.nodes;
+
+              const getFieldId = (name) => {
+                const field = projectFields.find(f => f.name === name);
+                if (!field) console.warn(`Field '${name}' not found in project (label update step).`);
+                return field ? field.id : null;
+              };
+
+              const getOptionId = (fieldName, optionName) => {
+                const field = projectFields.find(f => f.name === fieldName && f.__typename === 'ProjectV2SingleSelectField');
+                if (!field) {
+                  console.warn(`Single select field '${fieldName}' not found (label update step).`);
+                  return null;
+                }
+                const option = field.options.find(opt => opt.name.toLowerCase() === optionName.toLowerCase()); // Case-insensitive option matching
+                if (!option) console.warn(`Option '${optionName}' not found for field '${fieldName}' (label update step).`);
+                return option ? option.id : null;
+              };
+
+              const fieldsToUpdateFromLabels = [];
+
+              // Priority Mapping
+              const priorityMap = {
+                "low priority": "low",
+                "medium priority": "medium",
+                "high priority": "high"
+              };
+              for (const label of issueLabels) {
+                if (priorityMap[label]) {
+                  const optionId = getOptionId("Priority", priorityMap[label]);
+                  if (optionId) {
+                    fieldsToUpdateFromLabels.push({ name: "Priority", value: optionId, type: "SINGLE_SELECT" });
+                    console.log(`Found label for Priority: ${label} -> ${priorityMap[label]}`);
+                    break; 
+                  }
+                }
+              }
+
+              // Module Mapping
+              const moduleLabels = ["ai-ml", "control-systems", "embedded", "navigation", "perception", "simulation", "airlock", "equipment-panel", "documentation"];
+              for (const label of issueLabels) {
+                if (moduleLabels.includes(label)) {
+                  const optionId = getOptionId("Module", label); // Assumes project option name matches label name
+                  if (optionId) {
+                    fieldsToUpdateFromLabels.push({ name: "Module", value: optionId, type: "SINGLE_SELECT" });
+                    console.log(`Found label for Module: ${label}`);
+                    break; 
+                  }
+                }
+              }
+
+              // Challenge Mapping
+              const challengeMap = {
+                "challenge 1": "Challenge 1",
+                "challenge 2": "Challenge 2",
+                "connectivity-test": "Connectivity Test",
+                "payload-test": "Payload Test"
+              };
+              for (const label of issueLabels) {
+                if (challengeMap[label]) {
+                  const optionId = getOptionId("Challenge", challengeMap[label]);
+                  if (optionId) {
+                    fieldsToUpdateFromLabels.push({ name: "Challenge", value: optionId, type: "SINGLE_SELECT" });
+                    console.log(`Found label for Challenge: ${label} -> ${challengeMap[label]}`);
+                    break;
+                  }
+                }
+              }
+              
+              // No label-based mapping for "Size/Effort" or "Due Date" in this step based on current info.
+
+              if (fieldsToUpdateFromLabels.length === 0) {
+                console.log("No specific labels found to update project fields. Defaults will remain.");
+                return;
+              }
+
+              for (const fieldInfo of fieldsToUpdateFromLabels) {
+                const fieldId = getFieldId(fieldInfo.name); // Field ID should already be known if optionId was found, but good for consistency
+                if (!fieldId || !fieldInfo.value) {
+                  console.warn(`Skipping update for field '${fieldInfo.name}' due to missing fieldId or value (label update step).`);
+                  continue;
+                }
+
+                console.log(`Updating field '${fieldInfo.name}' (ID: ${fieldId}) based on labels.`);
+                
+                let mutationValue;
+                if (fieldInfo.type === "SINGLE_SELECT") {
+                  mutationValue = { singleSelectOptionId: fieldInfo.value };
+                } else { // Add other types if needed, e.g., DATE, TEXT
+                  console.warn(`Unsupported field type '${fieldInfo.type}' for field '${fieldInfo.name}' in label update step.`);
+                  continue;
+                }
+
+                const mutation = `
+                  mutation($input: UpdateProjectV2ItemFieldValueInput!) {
+                    updateProjectV2ItemFieldValue(input: $input) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }`;
+                
+                await github.graphql(mutation, {
+                  input: {
+                    projectId: projectId,
+                    itemId: itemId,
+                    fieldId: fieldId,
+                    value: mutationValue
+                  }
+                });
+                console.log(`Successfully updated field '${fieldInfo.name}' based on labels.`);
+              }
+              console.log("Label-based field update process complete.");
+
+            } catch (error) {
+              core.setFailed(`Error setting project fields based on labels: ${error.message}\n${error.stack}`);
+            }
 
   notify-members:
     name: Notify organization members
