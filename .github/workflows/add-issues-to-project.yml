@@ -1,20 +1,65 @@
-name: Add Issues to Project
+name: Add Issues to Project and Notify Members
 
 on:
   issues:
     types:
       - opened
-      - labeled # Trigger when an issue is opened OR a label is added
-
+      - reopened
 jobs:
   add-to-project:
     name: Add issue to project
     runs-on: ubuntu-latest
     steps:
+      - name: Calculate Due Date
+        id: calculate_due_date
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const createdAt = new Date(context.payload.issue.created_at);
+            const dueDate = new Date(createdAt);
+            dueDate.setDate(createdAt.getDate() + 14);
+            const year = dueDate.getFullYear();
+            const month = String(dueDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+            const day = String(dueDate.getDate()).padStart(2, '0');
+            const formattedDueDate = `${year}-${month}-${day}`;
+            core.setOutput("due_date", formattedDueDate);
       - name: Add to NSpace ERC Project
         uses: actions/add-to-project@v0.5.0 # Use the latest version
         with:
           project-url: "https://github.com/orgs/NSpaceTeam/projects/4"
           github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }} # PAT with project scope
-          labeled: "Bug, Feature, Task" # Optional: only add if it has one of these labels
-          # label-operator: OR # Optional: if multiple labels, use OR or AND
+          # Default field values (will be overridden by 'labeled' if a match is found)
+          Priority: medium
+          Challenge: Overall Project
+          Size/Effort: S (1-2d) # Default Size/Effort
+          Due Date: ${{ steps.calculate_due_date.outputs.due_date }}
+          # Label-based field assignments
+          # Field names (e.g., Priority) and their values (e.g., high) must exactly match your project's configuration.
+          # Labels (e.g., high priority) must exactly match your repository's labels.
+          labeled: "Priority=high:high priority,Priority=medium:medium priority,Priority=low:low priority,Module=ai-ml:ai-ml,Module=control-systems:control-systems,Module=embedded:embedded,Module=navigation:navigation,Module=perception:perception,Module=simulation:simulation,Module=airlock:airlock,Module=equipment-panel:equipment-panel,Module=documentation:documentation,Challenge=Challenge 1:challenge-1,Challenge=Challenge 2:challenge-2,Challenge=Connectivity Test:connectivity-test,Challenge=Payload Test:payload-test"
+
+  notify-members:
+    name: Notify organization members
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened' # Only notify on new issues, not reopened
+    steps:
+      - name: Add notification comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { issue } = context.payload;
+            const creator = issue.user.login;
+
+            // You can customize this message as needed
+            const message = `@NSpaceTeam/members A new issue has been created by @${creator}:\n\n` +
+                           `**${issue.title}**\n\n` +
+                           `${issue.body?.substring(0, 200)}${issue.body?.length > 200 ? '...' : ''}\n\n` +
+                           `[View the full issue](${issue.html_url})`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: message
+            });
