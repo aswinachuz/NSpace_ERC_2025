@@ -82,13 +82,24 @@ jobs:
                           }
                           ... on ProjectV2IterationField { # For specific properties of iteration fields (if any)
                             # id, name, dataType are covered by ProjectV2Field fragment
-                            # Add specific iteration properties here if needed later, e.g.:
-                            # configuration {
-                            #   iterations { id title startDate duration }
-                            # }
+                            configuration {
+                              iterations {
+                                id
+                                title
+                                startDate # Date string, e.g., "YYYY-MM-DD"
+                                duration  # Number of days
+                              }
+                              # If you also need completed iterations or startDay, uncomment as needed
+                              # completedIterations {
+                              #   id
+                              #   title
+                              #   startDate
+                              #   duration
+                              # }
+                              # startDay # e.g., MONDAY
+                            }
                           }
                           # Add other field types here if they are part of your defaults
-                          # and require querying specific nested properties.
                         }
                       }
                     }
