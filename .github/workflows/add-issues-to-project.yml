@@ -37,13 +37,20 @@ jobs:
           result-encoding: string # Ensure the output is a string
           script: |
             const projectUrl = "https://github.com/orgs/NSpaceTeam/projects/4";
-            const match = projectUrl.match(/orgs\\/([^\\/]+)\\/projects\\/(\\d+)/);
-            if (!match) {
-              core.setFailed(`Could not parse organization and project number from URL: ${projectUrl}`);
+            const parts = projectUrl.split('/');
+            // Expected URL: "https://github.com/orgs/NSpaceTeam/projects/4"
+            // parts: ["https:", "", "github.com", "orgs", "NSpaceTeam", "projects", "4"]
+            if (parts.length < 7 || parts[3] !== 'orgs' || parts[5] !== 'projects') {
+              core.setFailed(`Could not parse organization and project number from URL using split: ${projectUrl}. Parts: ${parts.join(', ')}`);
               return;
             }
-            const orgLogin = match[1];
-            const projectNumber = parseInt(match[2], 10);
+            const orgLogin = parts[4];
+            const projectNumber = parseInt(parts[6], 10);
+
+            if (!orgLogin || isNaN(projectNumber)) {
+              core.setFailed(`Parsed invalid orgLogin or projectNumber. Org: '${orgLogin}', Proj#: '${parts[6]}' from URL: ${projectUrl}`);
+              return;
+            }
 
             core.info(`Fetching Project ID for org: ${orgLogin}, project number: ${projectNumber}`);
 
