@@ -52,10 +52,11 @@ jobs:
 
             const projectURL = "https://github.com/orgs/NSpaceTeam/projects/4";
             const projectOwnerLogin = projectURL.split('/')[3];
-            const projectNumber = parseInt(projectURL.split('/')[5]);
+            const projectNumber = parseInt(projectURL.split('/')[6]); // Corrected index from 5 to 6
             const dueDateValue = "${{ steps.calculate_due_date.outputs.due_date }}";
 
             console.log(`Attempting to set default fields for item ID: ${itemId}`);
+            console.log(`Project Owner: ${projectOwnerLogin}, Project Number: ${projectNumber} (type: ${typeof projectNumber})`); // Added logging for type
 
             try {
               // Query to get project structure (field definitions, options)
@@ -256,11 +257,12 @@ jobs:
             }
 
             console.log(`Attempting to set fields based on labels for item ID: ${itemId}`);
+            console.log(`Project Owner: ${projectOwnerLogin}, Project Number: ${projectNumber} (type: ${typeof projectNumber})`); // Added logging for type
             console.log(`Issue labels: ${issueLabels.join(', ')}`);
 
             const projectURL = "https://github.com/orgs/NSpaceTeam/projects/4"; // Duplicated for clarity, consider outputs if preferred
             const projectOwnerLogin = projectURL.split('/')[3];
-            const projectNumber = parseInt(projectURL.split('/')[5]);
+            const projectNumber = parseInt(projectURL.split('/')[6]); // Corrected index from 5 to 6
 
             try {
               const projectDataQuery = `
