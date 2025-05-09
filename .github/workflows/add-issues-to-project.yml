@@ -86,7 +86,7 @@ jobs:
                   }
                 }`;
 
-              const projectStructureData = await github.graphql(projectStructureQuery, { ownerLogin, projectNumber });
+              const projectStructureData = await github.graphql(projectStructureQuery, { ownerLogin: projectOwnerLogin, projectNumber: projectNumber });
 
               if (!projectStructureData.organization || !projectStructureData.organization.projectV2) {
                 core.setFailed(`Could not find projectV2 (structure) for owner '${projectOwnerLogin}' and number ${projectNumber}. Check project URL and token permissions.`);
@@ -289,7 +289,7 @@ jobs:
                   }
                 }`;
 
-              const projectData = await github.graphql(projectDataQuery, { ownerLogin, projectNumber });
+              const projectData = await github.graphql(projectDataQuery, { ownerLogin: projectOwnerLogin, projectNumber: projectNumber });
 
               if (!projectData.organization || !projectData.organization.projectV2) {
                 core.setFailed(`Could not find projectV2 for owner '${projectOwnerLogin}' and number ${projectNumber} (label update step).`);
@@ -415,28 +415,28 @@ jobs:
               core.setFailed(`Error setting project fields based on labels: ${error.message}\n${error.stack}`);
             }
 
-  notify-members:
-    name: Notify organization members
-    runs-on: ubuntu-latest
-    if: github.event.action == 'opened' # Only notify on new issues, not reopened
-    steps:
-      - name: Add notification comment
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { issue } = context.payload;
-            const creator = issue.user.login;
+  # notify-members:
+  #   name: Notify organization members
+  #   runs-on: ubuntu-latest
+  #   if: github.event.action == 'opened' # Only notify on new issues, not reopened
+  #   steps:
+  #     - name: Add notification comment
+  #       uses: actions/github-script@v6
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         script: |
+  #           const { issue } = context.payload;
+  #           const creator = issue.user.login;
 
-            // You can customize this message as needed
-            const message = `@NSpaceTeam/members A new issue has been created by @${creator}:\n\n` +
-                           `**${issue.title}**\n\n` +
-                           `${issue.body?.substring(0, 200)}${issue.body?.length > 200 ? '...' : ''}\n\n` +
-                           `[View the full issue](${issue.html_url})`;
+  #           // You can customize this message as needed
+  #           const message = `@NSpaceTeam/members A new issue has been created by @${creator}:\n\n` +
+  #                          `**${issue.title}**\n\n` +
+  #                          `${issue.body?.substring(0, 200)}${issue.body?.length > 200 ? '...' : ''}\n\n` +
+  #                          `[View the full issue](${issue.html_url})`;
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.number,
-              body: message
-            });
+  #           await github.rest.issues.createComment({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             issue_number: issue.number,
+  #             body: message
+  #           });
