@@ -109,19 +109,19 @@ jobs:
                           __typename
                           ... on ProjectV2ItemFieldDateValue {
                             date
-                            projectField { id name }
+                            field { id name } # Corrected from projectField
                           }
                           ... on ProjectV2ItemFieldSingleSelectValue {
                             optionId # The ID of the currently selected option
-                            projectField { id name }
+                            field { id name } # Corrected from projectField
                           }
                           ... on ProjectV2ItemFieldTextValue {
                             text
-                            projectField { id name }
+                            field { id name } # Corrected from projectField
                           }
                           ... on ProjectV2ItemFieldNumberValue {
                             number
-                            projectField { id name }
+                            field { id name } # Corrected from projectField
                           }
                           # Add other field value types if needed for checking
                         }
@@ -136,7 +136,7 @@ jobs:
               // Map current field values by field ID for easy lookup to see if they are set
               const currentValuesMap = new Map();
               for (const valNode of currentFieldValues) {
-                if (valNode.projectField && valNode.projectField.id) {
+                if (valNode.field && valNode.field.id) { // Corrected from valNode.projectField
                   let isFieldSet = false;
                   switch (valNode.__typename) {
                     case 'ProjectV2ItemFieldDateValue':
@@ -153,7 +153,7 @@ jobs:
                       break;
                   }
                   if (isFieldSet) {
-                    currentValuesMap.set(valNode.projectField.id, true); // Mark as set
+                    currentValuesMap.set(valNode.field.id, true); // Corrected from valNode.projectField.id
                   }
                 }
               }
