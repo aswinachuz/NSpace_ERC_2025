@@ -51,8 +51,8 @@ jobs:
             }
 
             const projectURL = "https://github.com/orgs/NSpaceTeam/projects/4";
-            const projectOwnerLogin = projectURL.split('/')[3];
-            const projectNumber = parseInt(projectURL.split('/')[6]); // Corrected index from 5 to 6
+            const projectOwnerLogin = projectURL.split('/')[4]; // Corrected index from 3 to 4
+            const projectNumber = parseInt(projectURL.split('/')[6]);
             const dueDateValue = "${{ steps.calculate_due_date.outputs.due_date }}";
 
             console.log(`Attempting to set default fields for item ID: ${itemId}`);
@@ -261,8 +261,8 @@ jobs:
             console.log(`Issue labels: ${issueLabels.join(', ')}`);
 
             const projectURL = "https://github.com/orgs/NSpaceTeam/projects/4"; // Duplicated for clarity, consider outputs if preferred
-            const projectOwnerLogin = projectURL.split('/')[3];
-            const projectNumber = parseInt(projectURL.split('/')[6]); // Corrected index from 5 to 6
+            const projectOwnerLogin = projectURL.split('/')[4]; // Corrected index from 3 to 4
+            const projectNumber = parseInt(projectURL.split('/')[6]);
 
             try {
               const projectDataQuery = `
