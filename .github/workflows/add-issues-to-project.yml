@@ -77,6 +77,163 @@ jobs:
               // Re-throw the error to ensure the workflow step fails
               throw error;
             }
+      - name: Set Default Project Fields
+        id: set_default_fields
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }}
+          script: |
+            const itemId = "${{ steps.add_issue_to_project_step.outputs.itemId }}";
+            const projectId = "${{ steps.get_project_id.outputs.projectId }}";
+            const calculatedDueDate = "${{ steps.calculate_due_date.outputs.due_date }}";
+
+            core.info(`[DefaultSetter] Starting default field setting for item ID: ${itemId}, project ID: ${projectId}`);
+
+            if (!itemId || !projectId) {
+              core.warning("[DefaultSetter] Item ID or Project ID is missing. Skipping default field setting.");
+              return;
+            }
+
+            const fieldNodeIds = {
+              priority: "PVTSSF_lADODIbpr84A4kaJzgtg82I",
+              challenge: "PVTSSF_lADODIbpr84A4kaJzgtg9hg",
+              sizeEffort: "PVTSSF_lADODIbpr84A4kaJzgtg9pw", // From user's file comment
+              dueDate: "PVTF_lADODIbpr84A4kaJzgtg9rw"
+            };
+
+            // !!! IMPORTANT: User needs to replace placeholder Option IDs if any !!!
+            const optionNodeIds = {
+              priority: {
+                medium: "c02548bb"
+              },
+              challenge: {
+                "Overall Project": "5bcb98b2"
+              },
+              sizeEffort: {
+                "S (1-2d)": "0127b4bc" // User needs to provide this
+              }
+            };
+
+            async function updateProjectV2ItemFieldDefault(input) {
+              const { projectId, itemId, fieldId, value, fieldName } = input;
+              core.info(`[DefaultSetter] Attempting to update item '${itemId}', field '${fieldName}' (${fieldId}) with default value ${JSON.stringify(value)}`);
+              try {
+                await github.graphql(
+                  `mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: ProjectV2FieldValue!) {
+                    updateProjectV2ItemFieldValue(input: {
+                      projectId: $projectId,
+                      itemId: $itemId,
+                      fieldId: $fieldId,
+                      value: $value
+                    }) {
+                      projectV2Item { id }
+                    }
+                  }`,
+                  { projectId, itemId, fieldId, value }
+                );
+                core.info(`[DefaultSetter] Successfully updated field '${fieldName}' (${fieldId}) for item '${itemId}'.`);
+              } catch (error) {
+                core.error(`[DefaultSetter] Error updating field '${fieldName}' (${fieldId}) for item '${itemId}': ${error.message}`);
+                // Do not re-throw, allow other defaults to be attempted.
+              }
+            }
+
+            const GET_ITEM_FIELDS_QUERY = `
+              query($itemId: ID!) {
+                node(id: $itemId) {
+                  ... on ProjectV2Item {
+                    id
+                    priority: fieldValueByName(name: "Priority") {
+                      ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+                    }
+                    challenge: fieldValueByName(name: "Challenge") {
+                      ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+                    }
+                    sizeEffort: fieldValueByName(name: "Size/Effort") {
+                      ... on ProjectV2ItemFieldSingleSelectValue { optionId }
+                    }
+                    dueDate: fieldValueByName(name: "Due Date") {
+                      ... on ProjectV2ItemFieldDateValue { date }
+                    }
+                  }
+                }
+              }`;
+
+            try {
+              core.info(`[DefaultSetter] Fetching current field values for item ID: ${itemId}`);
+              const currentFieldsResult = await github.graphql(GET_ITEM_FIELDS_QUERY, { itemId });
+
+              if (!currentFieldsResult || !currentFieldsResult.node) {
+                core.warning(`[DefaultSetter] Could not fetch current fields for item ${itemId}. Result: ${JSON.stringify(currentFieldsResult)}`);
+                return;
+              }
+
+              const itemData = currentFieldsResult.node;
+              core.info(`[DefaultSetter] Current item data before defaults: ${JSON.stringify(itemData)}`);
+
+              // 1. Default Priority if not set
+              const currentPriority = itemData.priority;
+              if (!currentPriority || !currentPriority.optionId) {
+                core.info("[DefaultSetter] Priority field is not set. Setting to default 'medium'.");
+                await updateProjectV2ItemFieldDefault({
+                  projectId, itemId, fieldId: fieldNodeIds.priority,
+                  value: { singleSelectOptionId: optionNodeIds.priority.medium },
+                  fieldName: "Priority"
+                });
+              } else {
+                core.info(`[DefaultSetter] Priority field already has a value. No default needed.`);
+              }
+
+              // 2. Default Challenge if not set
+              const currentChallenge = itemData.challenge;
+              if (!currentChallenge || !currentChallenge.optionId) {
+                core.info("[DefaultSetter] Challenge field is not set. Setting to default 'Overall Project'.");
+                await updateProjectV2ItemFieldDefault({
+                  projectId, itemId, fieldId: fieldNodeIds.challenge,
+                  value: { singleSelectOptionId: optionNodeIds.challenge["Overall Project"] },
+                  fieldName: "Challenge"
+                });
+              } else {
+                core.info(`[DefaultSetter] Challenge field already has a value. No default needed.`);
+              }
+
+              // 3. Default Size/Effort if not set
+              const currentSizeEffort = itemData.sizeEffort;
+              const defaultSizeOptionId = optionNodeIds.sizeEffort["S (1-2d)"];
+              if (!currentSizeEffort || !currentSizeEffort.optionId) {
+                if (defaultSizeOptionId === "OPTION_ID_FOR_SIZE_S") {
+                  core.warning("[DefaultSetter] Size/Effort field is not set, but Option ID for 'S (1-2d)' is a placeholder 'OPTION_ID_FOR_SIZE_S'. Please update it in the workflow.");
+                } else {
+                  core.info("[DefaultSetter] Size/Effort field is not set. Setting to default 'S (1-2d)'.");
+                  await updateProjectV2ItemFieldDefault({
+                    projectId, itemId, fieldId: fieldNodeIds.sizeEffort,
+                    value: { singleSelectOptionId: defaultSizeOptionId },
+                    fieldName: "Size/Effort"
+                  });
+                }
+              } else {
+                core.info(`[DefaultSetter] Size/Effort field already has a value. No default needed.`);
+              }
+
+              // 4. Default Due Date if not set and calculatedDueDate is available
+              const currentDueDate = itemData.dueDate;
+              if ((!currentDueDate || !currentDueDate.date) && calculatedDueDate) {
+                core.info(`[DefaultSetter] Due Date field is not set. Setting to calculated default: ${calculatedDueDate}.`);
+                await updateProjectV2ItemFieldDefault({
+                  projectId, itemId, fieldId: fieldNodeIds.dueDate,
+                  value: { date: calculatedDueDate },
+                  fieldName: "Due Date"
+                });
+              } else if (calculatedDueDate) {
+                core.info(`[DefaultSetter] Due Date field already has a value. No default needed (or calculated date was missing).`);
+              } else {
+                 core.info(`[DefaultSetter] Calculated Due Date is not available. Skipping default Due Date setting.`);
+              }
+
+            } catch (error) {
+              core.error(`[DefaultSetter] Error during default setting script execution: ${error.message}`);
+              core.setFailed(`[DefaultSetter] Error: ${error.message}`);
+            }
       - name: Set Project Fields from Labels and Due Date
         uses: actions/github-script@v7.0.1
         with:
