@@ -66,40 +66,43 @@ jobs:
                     projectV2(number: $projectNumber) {
                       id # Project's Node ID
                       fields(first: 50) { # List of field definitions in the project
-                        nodes {
+                        nodes { # Each node is ProjectV2FieldInterface
+                          id
+                          name
                           __typename
-                          ... on ProjectV2Field { # For common properties like id, name, and dataType
-                            id
-                            name
+                          # Fragment for the generic ProjectV2Field type to get dataType
+                          ... on ProjectV2Field {
                             dataType
                           }
-                          ... on ProjectV2SingleSelectField { # For specific properties of single select
-                            # id, name, dataType are covered by ProjectV2Field fragment
+                          ... on ProjectV2SingleSelectField {
+                            # id, name are from ProjectV2FieldInterface
+                            # dataType will be inherited from ProjectV2Field fragment
                             options {
                               id
                               name
                             }
                           }
-                          ... on ProjectV2IterationField { # For specific properties of iteration fields (if any)
-                            # id, name, dataType are covered by ProjectV2Field fragment
-                            configuration {
+                          ... on ProjectV2IterationField {
+                            # id, name are from ProjectV2FieldInterface
+                            # dataType will be inherited from ProjectV2Field fragment
+                            configuration { # This is ProjectV2IterationFieldConfiguration
                               iterations {
                                 id
                                 title
                                 startDate # Date string, e.g., "YYYY-MM-DD"
                                 duration  # Number of days
                               }
-                              # If you also need completed iterations or startDay, uncomment as needed
-                              # completedIterations {
-                              #   id
-                              #   title
-                              #   startDate
-                              #   duration
-                              # }
-                              # startDay # e.g., MONDAY
+                              completedIterations { # Querying more completely
+                                id
+                                title
+                                startDate
+                                duration
+                              }
+                              startDay # Querying more completely
                             }
                           }
-                          # Add other field types here if they are part of your defaults
+                          # Add other specific field type fragments if their unique properties are needed
+                          # e.g., ... on ProjectV2NumberField { /* specific number field props */ }
                         }
                       }
                     }
