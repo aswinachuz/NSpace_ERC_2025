@@ -16,5 +16,5 @@ jobs:
         with:
           project-url: "https://github.com/orgs/NSpaceTeam/projects/4"
           github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }} # PAT with project scope
-          labeled: "bug, feature, task" # Optional: only add if it has one of these labels
+          labeled: "Bug, Feature, Task" # Optional: only add if it has one of these labels
           # label-operator: OR # Optional: if multiple labels, use OR or AND
