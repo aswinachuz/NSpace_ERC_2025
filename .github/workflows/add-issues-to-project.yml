@@ -36,7 +36,7 @@ jobs:
           script: |
             const itemId = "${{ steps.add_issue_to_project_step.outputs.itemId }}";
             const projectId = "${{ steps.add_issue_to_project_step.outputs.projectId }}";
-            const issueLabels = github.context.payload.issue.labels.map(label => label.name.toLowerCase());
+            const issueLabels = context.payload.issue.labels.map(label => label.name.toLowerCase());
             const dueDate = "${{ steps.calculate_due_date.outputs.due_date }}";
 
             core.info(`Project ID: ${projectId}`);
