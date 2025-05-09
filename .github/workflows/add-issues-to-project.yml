@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Calculate Due Date
         id: calculate_due_date
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7.0.1
         with:
           script: |
             const createdAt = new Date(context.payload.issue.created_at);
@@ -25,17 +25,58 @@ jobs:
             core.setOutput("due_date", formattedDueDate);
       - name: Add to NSpace ERC Project
         id: add_issue_to_project_step # Added ID for referencing output (itemId)
-        uses: actions/add-to-project@v0.5.0 # Use the latest version
+        uses: actions/add-to-project@v1.0.2 # Use the latest version
         with:
           project-url: "https://github.com/orgs/NSpaceTeam/projects/4"
           github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }} # PAT with project scope
+      - name: Get Project ID
+        id: get_project_id
+        uses: actions/github-script@v7.0.1
+        with:
+          github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }}
+          result-encoding: string # Ensure the output is a string
+          script: |
+            const projectUrl = "https://github.com/orgs/NSpaceTeam/projects/4";
+            const match = projectUrl.match(/orgs\\/([^\\/]+)\\/projects\\/(\\d+)/);
+            if (!match) {
+              core.setFailed(`Could not parse organization and project number from URL: ${projectUrl}`);
+              return;
+            }
+            const orgLogin = match[1];
+            const projectNumber = parseInt(match[2], 10);
+
+            core.info(`Fetching Project ID for org: ${orgLogin}, project number: ${projectNumber}`);
+
+            const query = `query($orgLogin: String!, $projectNumber: Int!) {
+              organization(login: $orgLogin) {
+                projectV2(number: $projectNumber) {
+                  id
+                }
+              }
+            }`;
+            const variables = { orgLogin, projectNumber };
+
+            try {
+              const result = await github.graphql(query, variables);
+              const projectId = result.organization.projectV2.id;
+              if (!projectId) {
+                core.setFailed(`Could not retrieve project ID. GraphQL result: ${JSON.stringify(result)}`);
+                return;
+              }
+              core.info(`Retrieved Project ID: ${projectId}`);
+              core.setOutput("projectId", projectId);
+            } catch (error) {
+              core.setFailed(`Error fetching project ID: ${error.message}`);
+              // Re-throw the error to ensure the workflow step fails
+              throw error;
+            }
       - name: Set Project Fields from Labels and Due Date
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7.0.1
         with:
           github-token: ${{ secrets.NSPACE_PROJECT_AUTOMATION }}
           script: |
             const itemId = "${{ steps.add_issue_to_project_step.outputs.itemId }}";
-            const projectId = "${{ steps.add_issue_to_project_step.outputs.projectId }}";
+            const projectId = "${{ steps.get_project_id.outputs.projectId }}"; // Use output from the new step
             const issueLabels = context.payload.issue.labels.map(label => label.name.toLowerCase());
             const dueDate = "${{ steps.calculate_due_date.outputs.due_date }}";
 
@@ -223,7 +264,7 @@ jobs:
   #   if: github.event.action == 'opened' # Only notify on new issues, not reopened
   #   steps:
   #     - name: Add notification comment
-  #       uses: actions/github-script@v6
+  #       uses: actions/github-script@v7.0.1
   #       with:
   #         github-token: ${{ secrets.GITHUB_TOKEN }}
   #         script: |
