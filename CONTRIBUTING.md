@@ -207,7 +207,7 @@ When your feature or bugfix is complete and tested locally:
 
 ## Issue and PR Labels
 
-We use labels to categorize and manage issues and PRs. Please use appropriate labels when creating or working on them. Refer to the [list of defined labels and their descriptions](docs/00_Project_Overview/GitHub_Labels_Guide.md) **(TODO)**.
+We use labels to categorize and manage issues and PRs. Please use appropriate labels when creating or working on them. Refer to the [list of defined labels and their descriptions](docs/00_Project_Overview/GitHub_Labels_Guide.md).
 
 ## Questions or Need Help?
 
