@@ -258,7 +258,8 @@ jobs:
               priority: "PVTSSF_lADODIbpr84A4kaJzgtg82I",
               module: "PVTSSF_lADODIbpr84A4kaJzgtg9Uc",
               challenge: "PVTSSF_lADODIbpr84A4kaJzgtg9hg",
-              dueDate: "PVTF_lADODIbpr84A4kaJzgtg9rw"
+              dueDate: "PVTF_lADODIbpr84A4kaJzgtg9rw",
+              team: "PVTSSF_lADODIbpr84A4kaJzgtms0w"
               // Size/Effort: "PVTSSF_lADODIbpr84A4kaJzgtg9pw" // Not used as no labels map to it yet
             };
 
@@ -285,7 +286,13 @@ jobs:
                 "Payload Test": "ecac1de9",
                 "Challenge 1": "7b17317c",
                 "Challenge 2": "92d04f4f"
-              }
+              },
+              team: {
+                "Software Team": "3d71e2bd",
+                "Embedded Team": "3679dfab",
+                "Design/Marketing Team": "85dca314",
+                "Website Team": "70ff8c93"
+                }
             };
 
             async function updateProjectV2ItemField(input) {
@@ -421,6 +428,35 @@ jobs:
             } else {
               core.info("Due date or Due Date Field ID not available, skipping due date update.");
             }
+
+            // 5. Set Team
+            const teamLabelMapping = {
+              "software-team": optionNodeIds.team["Software Team"],
+              "embedded-team": optionNodeIds.team["Embedded Team"],
+              "design-marketing-team": optionNodeIds.team["Design/Marketing Team"],
+              "website-team": optionNodeIds.team["Website Team"]
+            };
+
+            for (const label of issueLabels) {
+              if (teamLabelMapping[label]) {
+                const teamOptionIdToSet = teamLabelMapping[label];
+                if (teamOptionIdToSet.startsWith("OPTION_ID_")) { // Should not happen if user updated IDs
+                  core.warning(`Team Option ID for label '${label}' is a placeholder: '${teamOptionIdToSet}'. Please replace it with the actual GraphQL Node ID.`);
+                } else {
+                  await updateProjectV2ItemField({
+                    projectId,
+                    itemId,
+                    fieldId: fieldNodeIds.team,
+                    value: { singleSelectOptionId: teamOptionIdToSet },
+                    fieldName: "Team"
+                  });
+                  core.info(`Set Team based on label: ${label}`);
+                  break; // Assuming an issue is assigned to only one team
+                }
+              }
+            }
+
+  ## NOTIFICATIONS ON ISSUE CREATION DISABLED TO AVOID SPAM
 
   # notify-members:
   #   name: Notify organization members
