@@ -8,4 +8,4 @@ This repository will house all software, firmware, simulation models, documentat
 - [ERC 2025 Technical Handbook](https://github.com/husarion/erc2025/blob/main/TECHNICAL_HANDBOOK.md)
 
 ## Current Focus
-- Initial setup and preparation for the Connectivity Test.
+- Initial setup and preparation for the ROS Test.
