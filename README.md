@@ -6,6 +6,7 @@ This repository will house all software, firmware, simulation models, documentat
 ## Quick Links
 - [Team Proposal](docs/00_Project_Overview/Team_Proposal_NSpace.md)
 - [ERC 2025 Technical Handbook](https://github.com/husarion/erc2025/blob/main/TECHNICAL_HANDBOOK.md)
+- [Panther Simulation Setup (Gazebo)](scripts/panther_sim_setup_gazebo/README.md)
 
 ## Current Focus
 - Initial setup and preparation for the Connectivity Test.
