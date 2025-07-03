@@ -77,20 +77,9 @@ You can now run ROS 2 commands:
 
 *   **Launch Gazebo Simulation:**
     ```bash
-    ros2 launch husarion_ugv_gazebo core_gazebo.launch.py
+    run_sim
     ```
-    (Or other Gazebo launch files from `husarion_ugv_gazebo`)
-
-*   **Launch Rviz2:**
-    In a *new terminal*, first attach to the *same running container*:
-    If you named your container (e.g., `husarion_amd`):
-    ```bash
-    docker exec -it husarion_amd bash
-    ```
-    Then, inside this new container terminal:
-    ```bash
-    ros2 launch husarion_ugv_viz view_robot.launch.py
-    ```
+   
 
 ## Using in a Collaborative Environment
 
