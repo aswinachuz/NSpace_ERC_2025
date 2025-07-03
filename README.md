@@ -9,4 +9,4 @@ This repository will house all software, firmware, simulation models, documentat
 - [Panther Simulation Setup (Gazebo)](simulation/panther_sim_setup_gazebo/README.md)
 
 ## Current Focus
-- Initial setup and preparation for the Connectivity Test.
+- Initial setup and preparation for the ROS Test.
