@@ -79,7 +79,9 @@ You can now run ROS 2 commands:
     ```bash
     run_sim
     ```
-   
+*   **WEAK PC (and arbitrary timeouts and other ERRORS):**
+    *   It might be required (and suggested otherwise) to lower the controller update period and gazebo simulation period to solve errors and have an overall acceptable experience.
+       *   These parameters can be updated in ```src/husarion_ugv_ros/husarion_ugv_controller/config/WH01_controller.yaml``` and ```vim src/husarion_gz_worlds/worlds/husarion_world.sdf``` inside the Docker shell.
 
 ## Using in a Collaborative Environment
 
