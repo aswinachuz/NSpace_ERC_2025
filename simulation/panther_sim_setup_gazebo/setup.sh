@@ -78,6 +78,15 @@ ALIAS_CMD_NVIDIA="${XHOST_CMD} docker run ${BASE_DOCKER_RUN_OPTIONS} \
     ${IMAGE_NAME} bash"
 add_or_update_alias "$ALIAS_NAME_NVIDIA" "$ALIAS_CMD_NVIDIA" "Husarion Docker: Run with NVIDIA GPU acceleration"
 
+# Alias for INTEL INTEGRATED GPU
+ALIAS_NAME_INTEL="${ALIAS_PREFIX}_intel"
+ALIAS_CMD_INTEL="${XHOST_CMD} docker run ${BASE_DOCKER_RUN_OPTIONS} \
+    --ipc=host \
+    --device=/dev/dri:/dev/dri \
+    --name husarion_intel \
+    ${IMAGE_NAME} bash"
+add_or_update_alias "$ALIAS_NAME_INTEL" "$ALIAS_CMD_INTEL" "Husarion Docker: Run with INTEL support"
+
 # Alias for AMD GPU
 # Try to get video group GID, fallback to render group GID if video group not found or getent fails
 VIDEO_GROUP_GID=$(getent group video | cut -d: -f3)
@@ -112,5 +121,5 @@ echo "1. Source your .bashrc file or open a new terminal:"
 echo "   source $BASHRC_FILE"
 echo ""
 echo "The 'xhost +local:docker' command will now run automatically when you use the aliases."
-echo "You can use aliases like '$ALIAS_NAME_NO_GPU', '$ALIAS_NAME_NVIDIA', or '$ALIAS_NAME_AMD' to start the container."
+echo "You can use aliases like '$ALIAS_NAME_NO_GPU', '$ALIAS_NAME_NVIDIA', '$ALIAS_NAME_AMD', or '$ALIAS_NAME_INTEL' to start the container."
 echo "Example: run_husarion_amd"
