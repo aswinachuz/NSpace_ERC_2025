@@ -35,7 +35,7 @@ RUN sudo apt-get update && sudo apt-get install -y \
 # Step 4: Create a ROS 2 workspace
 WORKDIR /
 RUN sudo mkdir /husarion_ws
-RUN git lfs clone -b master https://github.com/Grkila/husarion_ws.git /husarion_ws
+RUN git lfs clone -b main https://github.com/NSpaceTeam/husarion_ws_helper.git /husarion_ws
 
 
 # Step 6: Initialize rosdep, import dependencies, install dependencies, and build the workspace
