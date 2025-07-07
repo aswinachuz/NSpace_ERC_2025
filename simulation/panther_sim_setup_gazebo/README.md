@@ -67,6 +67,11 @@ After setup, you can use the following aliases to run the container. Each alias 
     run_husarion_amd
     ```
 
+*   **Attach to Running Container:**
+    ```bash
+    run_husarion_attach
+    ```
+
     *(The actual commands executed by these aliases now include `xhost +local:docker &&` at the beginning.)*
 
 ## Inside the Container
