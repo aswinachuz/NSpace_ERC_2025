@@ -102,16 +102,7 @@ Docker is excellent for ensuring consistent development and runtime environments
         *   It also sets up the convenient run aliases locally for them.
     *   **Consistency:** As long as everyone builds from the same committed `Dockerfile`, their environments will be consistent.
 
-3.  **Sharing Pre-built Images (Optional, for CI/CD or specific deployments):**
-    *   You can push the built Docker image to a container registry like Docker Hub, GitHub Container Registry (GHCR), GitLab Container Registry, or a private registry.
-    *   **Tagging:** Use meaningful tags for your images (e.g., `yourteam/my-husarion-app:jazzy-v1.0`, `yourteam/my-husarion-app:jazzy-latest`).
-    *   **Pulling:** Team members can then pull the pre-built image instead of building it locally:
-        ```bash
-        docker pull yourregistry/yourimage:tag
-        ```
-    *   **Updating Aliases:** If using pre-built images, the `IMAGE_NAME` in `setup_docker.sh` (or directly in `.bashrc` aliases) would need to point to the registry image (e.g., `yourregistry/yourimage:tag`). The build step in `setup_docker.sh` could be skipped or made conditional.
-    *   **Pros:** Saves build time for each user, ensures bit-for-bit identical images.
-    *   **Cons:** Requires registry setup and management; `Dockerfile` changes need a new image to be built and pushed.
+
 
 4.  **Host Environment Still Matters (GPU, X11):**
     *   While the Docker container provides a consistent *software* environment, team members will still need to correctly configure their *host machines* for Docker, especially for GUI and GPU access.
