@@ -75,9 +75,13 @@ Once the container is running, you'll be at a bash prompt inside the Docker envi
 
 You can now run ROS 2 commands:
 
-*   **Launch Gazebo Simulation:**
+*   **Launch Default terrain in Gazebo Simulation:**
     ```bash
     run_sim
+    ```
+    **Launch marsyard terrain in Gazebo Simulation:**
+    ```bash
+    run_sim_marsyard
     ```
 *   **WEAK PC (and arbitrary timeouts and other ERRORS):**
     *   It might be required (and suggested otherwise) to lower the controller update period and gazebo simulation period to solve errors and have an overall acceptable experience.
